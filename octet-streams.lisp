@@ -9,7 +9,7 @@
 
 ;;; portability definitions
 
-#+cmu
+#+(or cmu abcl)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require :gray-streams))
 
@@ -22,6 +22,10 @@
                    'excl:stream-write-string)
     (require "streamc.fasl")))
 
+#+ecl
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (gray::redefine-cl-functions))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
 (defvar *binary-input-stream-class*
   (quote
@@ -30,7 +34,9 @@
    #+openmcl gray:fundamental-binary-input-stream
    #+cmu ext:fundamental-binary-input-stream
    #+allegro excl:fundamental-binary-input-stream
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:fundamental-binary-input-stream
+   #+(or ecl clisp) gray:fundamental-binary-input-stream
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *binary-output-stream-class*
@@ -40,7 +46,9 @@
    #+openmcl gray:fundamental-binary-output-stream
    #+cmu ext:fundamental-binary-output-stream
    #+allegro excl:fundamental-binary-output-stream
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:fundamental-binary-output-stream
+   #+(or ecl clisp) gray:fundamental-binary-output-stream
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 ;;; FIXME: how to do CMUCL support for this?
@@ -51,7 +59,9 @@
    #+openmcl cl:stream-element-type
    #+cmu cl:stream-element-type
    #+allegro cl:stream-element-type
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl cl:stream-element-type
+   #+(or ecl clisp) cl:stream-element-type
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-read-byte-function*
@@ -61,7 +71,9 @@
    #+openmcl gray:stream-read-byte
    #+cmu ext:stream-read-byte
    #+allegro excl:stream-read-byte
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-read-byte
+   #+(or ecl clisp) gray:stream-read-byte
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-write-byte-function*
@@ -71,7 +83,9 @@
    #+openmcl gray:stream-write-byte
    #+cmu ext:stream-write-byte
    #+allegro excl:stream-write-byte
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-write-byte
+   #+(or ecl clisp) gray:stream-write-byte
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-read-sequence-function*
@@ -81,7 +95,9 @@
    #+openmcl ccl:stream-read-vector
    #+cmu ext:stream-read-sequence
    #+allegro excl:stream-read-sequence
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-read-sequence
+   #+(or ecl clisp) gray:stream-read-sequence
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-write-sequence-function*
@@ -91,7 +107,9 @@
    #+openmcl ccl:stream-write-vector
    #+cmu ext:stream-write-sequence
    #+allegro excl:stream-write-sequence
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-write-sequence
+   #+(or ecl clisp) gray:stream-write-sequence
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-finish-output-function*
@@ -101,7 +119,9 @@
    #+openmcl gray:stream-finish-output
    #+cmu ext:stream-finish-output
    #+allegro excl:stream-finish-output
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-finish-output
+   #+(or ecl clisp) gray:stream-finish-output
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-force-output-function*
@@ -111,7 +131,9 @@
    #+openmcl gray:stream-force-output
    #+cmu ext:stream-force-output
    #+allegro excl:stream-force-output
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-force-output
+   #+(or ecl clisp) gray:stream-force-output
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 
 (defvar *stream-clear-output-function*
@@ -121,7 +143,9 @@
    #+openmcl gray:stream-clear-output
    #+cmu ext:stream-clear-output
    #+allegro excl:stream-clear-output
-   #-(or lispworks sbcl openmcl cmu allegro)
+   #+abcl gray-streams:stream-clear-output
+   #+(or ecl clisp) gray:stream-clear-output
+   #-(or lispworks sbcl openmcl cmu allegro abcl ecl clisp)
    (error "octet streams not supported in this implementation")))
 )
 
@@ -175,6 +199,30 @@
        (,type
         ,@body)
        (t
+        (call-next-method))))
+  #+abcl
+  `(defmethod gray-streams:stream-read-sequence ((stream ,specializer) seq &optional (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
+        (call-next-method))))
+  #+ecl
+  `(defmethod gray:stream-read-sequence ((stream ,specializer) seq &optional (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
+        (call-next-method))))
+  #+clisp
+  `(defmethod gray:stream-read-sequence ((stream ,specializer) seq &key (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
         (call-next-method)))))
 
 (defmacro define-stream-write-sequence (specializer type &body body)
@@ -223,6 +271,30 @@
        (,type
         ,@body)
        (t
+        (call-next-method))))
+  #+abcl
+  `(defmethod gray-streams:stream-write-sequence ((stream ,specializer) seq &optional (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
+        (call-next-method))))
+  #+ecl
+  `(defmethod gray:stream-write-sequence ((stream ,specializer) seq &optional (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
+        (call-next-method))))
+  #+clisp
+  `(defmethod gray:stream-write-sequence ((stream ,specializer) seq &key (start 0) end)
+     (typecase seq
+       (,type
+        (let ((end (or end (length seq))))
+          ,@body))
+       (t
         (call-next-method)))))
 
 ;;; input streams
@@ -263,6 +335,9 @@
     (make-instance 'octet-input-stream
                    :buffer buffer :index start :end end)))
 
+(defmacro with-octet-input-stream ((var buffer &optional (start 0) end) &body body)
+  `(with-open-stream (,var (make-octet-input-stream ,buffer ,start ,end))
+     ,@body))
 
 ;;; output streams
 
@@ -319,3 +394,8 @@ of a string output-stream."
   "As MAKE-STRING-OUTPUT-STREAM, only with octets instead of characters."
   (make-instance 'octet-output-stream
                  :buffer (make-array 128 :element-type '(unsigned-byte 8))))
+
+(defmacro with-octet-output-stream ((var) &body body)
+  `(with-open-stream (,var (make-octet-output-stream))
+     ,@body
+     (get-output-stream-octets ,var)))
