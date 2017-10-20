@@ -335,6 +335,9 @@
     (make-instance 'octet-input-stream
                    :buffer buffer :index start :end end)))
 
+(defmacro with-octet-input-stream ((var buffer &optional (start 0) end) &body body)
+  `(with-open-stream (,var (make-octet-input-stream ,buffer ,start ,end))
+     ,@body))
 
 ;;; output streams
 
@@ -391,3 +394,8 @@ of a string output-stream."
   "As MAKE-STRING-OUTPUT-STREAM, only with octets instead of characters."
   (make-instance 'octet-output-stream
                  :buffer (make-array 128 :element-type '(unsigned-byte 8))))
+
+(defmacro with-octet-output-stream ((var) &body body)
+  `(with-open-stream (,var (make-octet-output-stream))
+     ,@body
+     (get-output-stream-octets ,var)))
